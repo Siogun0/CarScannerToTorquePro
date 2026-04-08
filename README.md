@@ -4,11 +4,11 @@ Converter PID from CarScanner CSP format to TorquePro CSV format
 
 Преобразование CSP файла с PID параметрами для CareScanner в CSV для TorquePro
 
-positional arguments:
+positional arguments:  
   input_file            Путь к входному CSP файлу с пидами для CarScanner
 
-options:
-  -h, --help            show this help message and exit
+options:  
+```  -h, --help            show this help message and exit
   -i, --input-csv INPUT_CSV
                         Путь к промежуточному CSV файлу с исходными данными (по умолчанию: <имя>_original.csv)
   -j, --json-output JSON_OUTPUT
@@ -17,7 +17,7 @@ options:
                         Путь к выходному CSV файлу с преобразованными пидами для TorquePro (по умолчанию: <имя>.csv)
   -v, --verbose         Подробный вывод информации
   -d, --debug           Сохранять файлы промежуточных преобразований
-
+```
 Примеры использования:
   # Базовое использование (все файлы создаются автоматически)
   python script.py custompids.csp
