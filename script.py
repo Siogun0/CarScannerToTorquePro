@@ -18,6 +18,16 @@ def get_unit(i):
         return ''
 
 
+def clean_diagnostic_string(value):
+    """Очищает строки BCM и ACM от элементов с префиксом 'ATFC'"""
+    if not value or not isinstance(value, str):
+        return ''
+
+    elements = value.split(';')
+    filtered = [elem for elem in elements if not elem.startswith('ATFC')]
+
+    return '\\'.join(filtered)
+
 def transform_tvv_string(tvv_string):
     """Преобразует строку TVV по заданному образцу"""
     if not tvv_string:
@@ -44,7 +54,7 @@ def transform_tvv_string(tvv_string):
     return ':'.join(transformed_parts)
 
 
-def simple_transform(obj):
+def simple_transform(obj, is_optmize=False):
     output_json = {
         'ModeAndPID': obj.get('CMD', ''),
         'Name': obj.get('NM', ''),
@@ -55,9 +65,13 @@ def simple_transform(obj):
         'Max Value': obj.get('MAX', '100'),
         'Units': get_unit(obj.get('UN')),
         'Header': obj.get('HDR', ''),
-        'startDiagnostic': obj.get('BCM', '').replace(';', '\\'),
+        'startDiagnostic': obj.get('BCM', '').replace(';', '\\'), #TODO optimize
         'stopDiagnostic': obj.get('ACM', '').replace(';', '\\'),
     }
+
+    if is_optmize and (obj.get('SBI', 0) + obj.get('DL', 0)) <= 7:
+        output_json['startDiagnostic'] = clean_diagnostic_string(obj.get('BCM', ''))
+        output_json['stopDiagnostic'] = clean_diagnostic_string(obj.get('ACM', ''))
 
     if obj.get('TP') == 0:  # Формула
         output_json['Equation'] = obj.get('FR', '')
@@ -112,6 +126,12 @@ def simple_transform(obj):
             print(f"Предупреждение: некорректная длина данных DL={dl} для объекта {obj.get('NM', 'Unknown')}")
             return None
 
+        if obj.get('SIG', False) == True and dl <= 4:
+            if dl == 1:   equation = f"SIGNED8({equation})"
+            elif dl == 2: equation = f"SIGNED16({equation})"
+            elif dl == 3: equation = f"SIGNED24({equation})"
+            elif dl == 4: equation = f"SIGNED32({equation})"
+
         if obj.get('MUL') is not None and obj.get('MUL') != 1: equation += f"*{str(obj.get('MUL'))}"
         if obj.get('DIV') is not None and obj.get('DIV') != 1: equation += f"/{str(obj.get('DIV'))}"
         if obj.get('OFS') is not None and obj.get('OFS') != 0: equation += f"+ ({str(obj.get('OFS'))})"
@@ -132,7 +152,7 @@ def simple_transform(obj):
     return output_json
 
 
-def process_files(input_file, input_csv_file=None, intermediate_json_file=None, output_csv_file=None, is_verbose=False, is_debug=False):
+def process_files(input_file, input_csv_file=None, intermediate_json_file=None, output_csv_file=None, is_verbose=False, is_debug=False, is_optmize=False):
     """
     Основная функция обработки файлов
 
@@ -186,7 +206,7 @@ def process_files(input_file, input_csv_file=None, intermediate_json_file=None, 
         if is_verbose: print("Трансформация данных...")
         transformed_data = [
             transformed for transformed in
-            (simple_transform(obj) for obj in original_data)
+            (simple_transform(obj, is_optmize) for obj in original_data)
             if transformed is not None
         ]
 
@@ -304,6 +324,12 @@ def main():
         action='store_true',
         help='Сохранять файлы промежуточных преобразований'
     )
+
+    parser.add_argument(
+        '-op', '--optimize',
+        action='store_true',
+        help='Оптимизировать. (удаляет настройку FlowControl для сообщений в один фрейм)'
+    )
     # Парсим аргументы
     args = parser.parse_args()
 
@@ -326,7 +352,8 @@ def main():
         args.json_output,
         args.output_csv,
         args.verbose,
-        args.debug
+        args.debug,
+        args.optimize
     )
 
     # Возвращаем код завершения
