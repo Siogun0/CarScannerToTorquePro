@@ -92,11 +92,11 @@ def simple_transform(obj, is_optmize=False):
 
         if dl == 1:   equation = bytes_letters[0]
 
-        elif dl == 2: equation = f"({bytes_letters[0]}*256+{bytes_letters[1]})"
+        elif dl == 2: equation = f"INT16{bytes_letters[0]}:{bytes_letters[1]})" #f"({bytes_letters[0]}*256+{bytes_letters[1]})"
 
-        elif dl == 3: equation = f"({bytes_letters[0]}*65536+{bytes_letters[1]}*256+{bytes_letters[2]})"
+        elif dl == 3: equation = f"INT24({bytes_letters[0]}:{bytes_letters[1]}:{bytes_letters[2]})" #f"({bytes_letters[0]}*65536+{bytes_letters[1]}*256+{bytes_letters[2]})"
 
-        elif dl == 4: equation = f"({bytes_letters[0]}*16777216+{bytes_letters[1]}*65536+{bytes_letters[2]}*256+{bytes_letters[3]})"
+        elif dl == 4: equation = f"INT32({bytes_letters[0]}:{bytes_letters[1]}:{bytes_letters[2]}:{bytes_letters[3]})" #f"({bytes_letters[0]}*16777216+{bytes_letters[1]}*65536+{bytes_letters[2]}*256+{bytes_letters[3]})"
 
         elif 5 <= dl <= (MAX_BYTES - shift):
             # Динамическое построение для любой длины
