@@ -28,6 +28,13 @@ def clean_diagnostic_string(value):
 
     return '\\'.join(filtered)
 
+
+def fix_expressions(s):
+    if not s: return s
+    s = re.sub(r'ShortSigned\(([^;,]+);([^;,]+)\)', r'(\1*256+\2 - BIT(\1:7)*65536)', s)
+    s = re.sub(r'GetBit\(([^;]+);(\d+)\)', r'BIT(\1:\2)', s)
+    return s
+
 def transform_tvv_string(tvv_string):
     """Преобразует строку TVV по заданному образцу"""
     if not tvv_string:
@@ -75,6 +82,10 @@ def simple_transform(obj, is_optmize=False):
 
     if obj.get('TP') == 0:  # Формула
         output_json['Equation'] = obj.get('FR', '')
+        # Преобразуем отличающиеся формулы
+        equation = fix_expressions(output_json['Equation'])
+        output_json['Equation'] = equation
+
 
     elif obj.get('TP') == 1:  # Поряок байт
         # Максимальная длина данных (A-Z = 26 байт)
@@ -92,7 +103,7 @@ def simple_transform(obj, is_optmize=False):
 
         if dl == 1:   equation = bytes_letters[0]
 
-        elif dl == 2: equation = f"INT16{bytes_letters[0]}:{bytes_letters[1]})" #f"({bytes_letters[0]}*256+{bytes_letters[1]})"
+        elif dl == 2: equation = f"INT16({bytes_letters[0]}:{bytes_letters[1]})" #f"({bytes_letters[0]}*256+{bytes_letters[1]})"
 
         elif dl == 3: equation = f"INT24({bytes_letters[0]}:{bytes_letters[1]}:{bytes_letters[2]})" #f"({bytes_letters[0]}*65536+{bytes_letters[1]}*256+{bytes_letters[2]})"
 
@@ -127,11 +138,14 @@ def simple_transform(obj, is_optmize=False):
             return None
 
         if obj.get('SIG', False) == True and dl <= 4:
-            if dl == 1:   equation = f"SIGNED8({equation})"
-            elif dl == 2: equation = f"SIGNED16({equation})"
-            elif dl == 3: equation = f"SIGNED24({equation})"
-            elif dl == 4: equation = f"SIGNED32({equation})"
-
+            # if dl == 1:   equation = f"SIGNED8({equation})"
+            # elif dl == 2: equation = f"SIGNED16({equation})"
+            # elif dl == 3: equation = f"SIGNED24({equation})"
+            # elif dl == 4: equation = f"SIGNED32({equation})"
+            if dl == 1:   equation = f"SIGNED({equation})"
+            elif dl == 2: equation = f"({equation} - (BIT({bytes_letters[0]}:7)*65536))"
+            elif dl == 3: equation = f"({equation} - (BIT({bytes_letters[0]}:7)*16777216))"
+            elif dl == 4: equation = f"({equation} - (BIT({bytes_letters[0]}:7)*4294967296))"
         if obj.get('MUL') is not None and obj.get('MUL') != 1: equation += f"*{str(obj.get('MUL'))}"
         if obj.get('DIV') is not None and obj.get('DIV') != 1: equation += f"/{str(obj.get('DIV'))}"
         if obj.get('OFS') is not None and obj.get('OFS') != 0: equation += f"+ ({str(obj.get('OFS'))})"
